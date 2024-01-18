@@ -1,4 +1,8 @@
-use std::error::Error;
+use std::{
+    error::Error,
+    fs::File,
+    io::{self, BufRead, BufReader, Read},
+};
 
 use clap::{App, Arg};
 
@@ -60,14 +64,55 @@ pub fn get_args() -> HeadResult<Config> {
 }
 
 pub fn run(config: Config) -> HeadResult<()> {
-    println!("{:#?}", config);
+    for filename in config.files {
+        match open(&filename) {
+            Ok(file) => {
+
+                println!("==> {} <==", filename);
+
+                if let Some(bytes_number) = config.bytes {
+                    read_bytes(bytes_number, file)?;
+                } else {
+                    read_line(config.lines, file)?;
+                }
+            }
+            Err(err) => eprintln!("head: {}: {}", filename, err),
+        }
+    }
     Ok(())
+}
+
+fn read_bytes(bytes_number: usize, file: Box<dyn BufRead>) -> Result<(), Box<dyn Error>> {
+    let mut handle = file.take(bytes_number as u64);
+    let mut buffer = vec![0; bytes_number];
+    let bytes_read = handle.read(&mut buffer)?;
+    print!("{}", String::from_utf8_lossy(&buffer[..bytes_read]));
+    Ok(())
+}
+
+fn read_line(line_number: usize, mut file: Box<dyn BufRead>) -> Result<(), Box<dyn Error>> {
+    let mut line = String::new();
+    Ok(for _ in 0..line_number {
+        let bytes = file.read_line(&mut line)?;
+        if bytes == 0 {
+            break;
+        }
+        print!("{}", line);
+        line.clear()
+    })
 }
 
 fn parse_positive_int(val: &str) -> HeadResult<usize> {
     match val.parse::<usize>() {
         Ok(n) if n > 0 => Ok(n),
         _ => Err(From::from("invalid positive integer")),
+    }
+}
+
+fn open(filename: &str) -> HeadResult<Box<dyn BufRead>> {
+    match filename {
+        "-" => Ok(Box::new(BufReader::new(io::stdin()))),
+        _ => Ok(Box::new(BufReader::new(File::open(filename)?))),
     }
 }
 
