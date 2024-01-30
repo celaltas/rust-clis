@@ -1,0 +1,13 @@
+warning: field `long` is never read
+  --> src/lib.rs:12:5
+   |
+10 | pub struct Config {
+   |            ------ field in this struct
+11 |     paths: Vec<String>,
+12 |     long: bool,
+   |     ^^^^
+   |
+   = note: `Config` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+   = note: `#[warn(dead_code)]` on by default
+
+blargh: No such file or directory (os error 2)
